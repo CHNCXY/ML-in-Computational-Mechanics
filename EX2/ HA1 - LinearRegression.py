@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 x = np.random.rand(100)
-y = np.sin(x) * np.power(x,3) + 3*x + np.random.rand(100)*0.8
+y = np.sin(x) * np.power(x,3) + 3*x + np.random.rand(100)*0.8# this is from original Homework
 # y = np.random.rand(100) * 10   #random between 0-10
 
 plt.scatter(x, y)
