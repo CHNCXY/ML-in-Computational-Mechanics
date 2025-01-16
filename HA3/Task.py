@@ -69,11 +69,86 @@ def geteps(X, U):
     eps[:, :, [0, 1], [1, 0]] = 0.5 * (eps[:, :, 0, 1] + eps[:, :, 1, 0]).unsqueeze(2).expand(samples_x, samples_y, 2)
     return eps
 
+def getF(X, U):
+    """
+    X: (N, 2)  -> 样本点坐标 (比如 (samples_x*samples_y, 2))
+    U: (N, 2)  -> 对应的位移场 (u_x, u_y)
+    
+    返回:
+       F: (N, 2, 2)  -> 每个点的形变梯度 F = I + grad(u)
+    """
+    # 使用 autograd 计算 du/dx, du/dy
+    # 下面这行和你原本 geteps() 类似，只是去掉了对称化，保留全部梯度
+    duxdxy = torch.autograd.grad(
+        U[:, 0].unsqueeze(1),       # 关注 u_x
+        X,
+        grad_outputs=torch.ones(X.size(0), 1, device=device),
+        create_graph=True,
+        retain_graph=True
+    )[0]  # shape: (N, 2)
+
+    duydxy = torch.autograd.grad(
+        U[:, 1].unsqueeze(1),       # 关注 u_y
+        X,
+        grad_outputs=torch.ones(X.size(0), 1, device=device),
+        create_graph=True,
+        retain_graph=True
+    )[0]  # shape: (N, 2)
+
+    # 组装 F
+    # 对于 2D: F = [[1 + ∂u_x/∂x,      ∂u_x/∂y],
+    #               [    ∂u_y/∂x,  1 + ∂u_y/∂y]]
+    F = torch.zeros(X.size(0), 2, 2, device=device)
+    F[:, 0, 0] = 1.0 + duxdxy[:, 0]
+    F[:, 0, 1] =        duxdxy[:, 1]
+    F[:, 1, 0] =        duydxy[:, 0]
+    F[:, 1, 1] = 1.0 + duydxy[:, 1]
+
+    # 如果你原先在代码中是 (samples_x, samples_y, 2, 2) 的网格形式，
+    # 可以再把F reshape回去
+    # F = F.view(samples_x, samples_y, 2, 2)
+
+    return F
+
 def material_model(eps):
     tr_eps = eps.diagonal(offset=0, dim1=-1, dim2=-2).sum(-1)
     sig = 2 * mu * eps + lam * torch.einsum('ij,kl->ijkl', tr_eps, torch.eye(eps.size()[-1], device=device))
     psi = torch.einsum('ijkl,ijkl->ij', eps, sig)
     return psi, sig
+
+def material_model_nh(F):
+    """
+    输入: F -> shape (N, 2, 2)
+    输出:
+      psi -> shape (N,)
+      sigma -> shape (N, 2, 2)  (Cauchy 应力)
+    """
+    # 1) 计算C, J, log(J)
+    C = torch.matmul(F.transpose(-1, -2), F)   # (N, 2, 2)
+    I1 = C[..., 0, 0] + C[..., 1, 1]           # trace(C)
+    J = torch.det(F)                           # (N,)
+    logJ = torch.log(J + 1e-12)  # 避免数值过小
+
+    # 2) 计算 Psi
+    # 公式: 
+    # Psi = (1/4)*lam*((logJ)^2 - 1 - 2logJ) + (1/2)*mu*(I1 - 2 - 2logJ)
+    # (N,) 逐点计算
+    term1 = 0.25 * lam * ( (logJ**2) - 1.0 - 2.0*logJ )
+    term2 = 0.5 * mu   * ( I1 - 2.0 - 2.0*logJ )
+    psi = term1 + term2
+
+    # 3) 计算一阶Piola-Kirchhoff P (手动写)
+    #     P = mu(F - F^-T) + lam * logJ * F^-T
+    F_invT = torch.inverse(F).transpose(-1, -2)  # (N, 2, 2)
+    P = mu*(F - F_invT) + lam*(logJ.unsqueeze(-1).unsqueeze(-1))*F_invT
+
+    # 4) 计算 Cauchy应力 sigma = 1/J * P * F^T
+    #    shape (N,2,2)
+    Ft = F.transpose(-1, -2)
+    sigma = (1.0 / (J.unsqueeze(-1).unsqueeze(-1)+1e-12)) * torch.matmul(P, Ft)
+
+    # 当然, 你也可以只返回 P, 由外面再做 1/J P F^T
+    return psi, sigma
 
 def integratePsi (psi):
     # PyTorch has a built-in function for trapezoidal integration.
