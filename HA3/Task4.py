@@ -256,8 +256,14 @@ def boundaryLosses(U, sig):
     return bc_losses
 
 def losses(U, plot, data_driven):
-    eps = geteps(sample_points, U)
-    psi, sig = material_model(eps)
+    # eps = geteps(sample_points, U)
+    # psi, sig = material_model(eps)
+
+    # 1) 先获取 F
+    F = getF(sample_points, U)  # shape (N,2,2) or (samples_x, samples_y, 2, 2)
+    
+    # 2) 用新的大变形 Neo-Hookean
+    psi, sig = material_model_nh(F)
 
     # Cool plots to better understand what's going on
     if plot:
