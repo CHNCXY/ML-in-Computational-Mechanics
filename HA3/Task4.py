@@ -272,22 +272,22 @@ def losses(U, plot, data_driven):
         plt.gca().set_aspect('equal')
         plt.scatter((sample_points[:, 0] + U[:, 0]).detach().cpu().numpy(),
                     (sample_points[:, 1] + U[:, 1]).detach().cpu().numpy(),
-                    c=(eps[:, :, 0, 0].detach().cpu().numpy()))
+                    c=(F[:, :, 0, 0].detach().cpu().numpy()))
         plt.colorbar()
-        plt.title("eps_x")
+        plt.title("F_x")
         plt.subplot(7, 3, 2)
         plt.gca().set_aspect('equal')
         plt.scatter((sample_points[:, 0] + U[:, 0]).detach().cpu().numpy(),
                     (sample_points[:, 1] + U[:, 1]).detach().cpu().numpy(),
                     c=(eps[:, :, 1, 1].detach().cpu().numpy()))
         plt.colorbar()
-        plt.title("eps_y")
+        plt.title("F_y")
         plt.subplot(7, 3, 3)
         plt.gca().set_aspect('equal')
         plt.scatter((sample_points[:, 0] + U[:, 0]).detach().cpu().numpy(),
                     (sample_points[:, 1] + U[:, 1]).detach().cpu().numpy(),
                     c=(eps[:, :, 0, 1].detach().cpu().numpy()))
-        plt.title("eps_xy")
+        plt.title("F_xy")
         plt.colorbar()
         plt.subplot(7, 3, 4)
         plt.gca().set_aspect('equal')
@@ -354,7 +354,7 @@ def losses(U, plot, data_driven):
                     (sample_points[:, 1] + U_target[:, 1]).detach().cpu().numpy(),
                     c=(eps[:, :, 0, 0].detach().cpu().numpy()))
         plt.colorbar()
-        plt.title("eps_x")
+        plt.title("F_x")
 
         plt.subplot(7, 3, 14)
         plt.gca().set_aspect('equal')
@@ -362,7 +362,7 @@ def losses(U, plot, data_driven):
                     (sample_points[:, 1] + U_target[:, 1]).detach().cpu().numpy(),
                     c=(eps[:, :, 1, 1].detach().cpu().numpy()))
         plt.colorbar()
-        plt.title("eps_y")
+        plt.title("F_y")
 
         plt.subplot(7, 3, 15)
         plt.gca().set_aspect('equal')
@@ -370,7 +370,7 @@ def losses(U, plot, data_driven):
                     (sample_points[:, 1] + U_target[:, 1]).detach().cpu().numpy(),
                     c=(eps[:, :, 0, 1].detach().cpu().numpy()))
         plt.colorbar()
-        plt.title("eps_xy")
+        plt.title("F_xy")
 
         plt.show()
 
